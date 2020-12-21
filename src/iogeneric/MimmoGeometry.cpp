@@ -170,6 +170,7 @@ MimmoGeometry::setDefaults(){
     m_multiSolidSTL = false;
     m_tolerance = 1.0e-06;
     m_clean = true;
+    m_parallel = MIMMO_ENABLE_MPI;
 }
 
 
@@ -380,6 +381,15 @@ MimmoGeometry::setTolerance(double tol){
 void
 MimmoGeometry::setClean(bool clean){
 	m_clean = clean;
+}
+
+/*!
+ * Set if the geometry to read is parallel or not.
+ * param[in] parallel is parallel flag
+ */
+void
+MimmoGeometry::setParallel(bool parallel){
+    m_parallel = parallel;
 }
 
 /*!
@@ -898,7 +908,8 @@ MimmoGeometry::read(){
     	bitpit::IBinaryArchive binaryReader(filename, "geomimmo");
 #endif
 
-        getGeometryReference().reset(new MimmoObject());
+    	// Reset to a generic geometry with the correct parallel propriety
+        getGeometryReference().reset(new MimmoObject(0, m_parallel));
         m_geometry->restore(binaryReader.getStream());
     	binaryReader.close();
     }
@@ -1173,6 +1184,15 @@ MimmoGeometry::absorbSectionXML(const bitpit::Config::Section & slotXML, std::st
         }
     };
 
+    if(slotXML.hasOption("Parallel")){
+        input = slotXML.get("Parallel");
+        bool value = true;
+        if(!input.empty()){
+            std::stringstream ss(bitpit::utils::string::trim(input));
+            ss >> value;
+        }
+        setParallel(value);
+    };
 
 };
 
@@ -1240,6 +1260,9 @@ MimmoGeometry::flushSectionXML(bitpit::Config::Section & slotXML, std::string na
     output = std::to_string(m_clean);
     slotXML.set("Clean", output);
     slotXML.set("FormatNAS", std::to_string(bool(m_wformat == WFORMAT::Long)));
+
+    output = std::to_string(m_parallel);
+    slotXML.set("Parallel", output);
 
 };
 
